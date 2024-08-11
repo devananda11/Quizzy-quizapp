@@ -3,6 +3,7 @@ Quizzy
 Quizzy is an interactive quiz website that allows users to challenge themselves with timed quizzes on various topics. Whether you're testing your knowledge or learning something new, Quizzy offers a fun and engaging platform to track your progress and compare your scores with others.
 
 Features
+
 Authentication:
 Secure user login and registration to keep track of your quizzes and scores.
 
