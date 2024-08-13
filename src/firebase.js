@@ -5,7 +5,7 @@ import {getAuth,GoogleAuthProvider} from "firebase/auth";
 import {getFirestore,doc,setDoc} from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  apiKey: "AIzaSyDkKwdAdVMRalvSxb7ay6mhz3h2tbV9n3U",
   authDomain: "quiz-app-70d81.firebaseapp.com",
   projectId: "quiz-app-70d81",
   storageBucket: "quiz-app-70d81.appspot.com",
