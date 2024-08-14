@@ -20,7 +20,7 @@ function Navbar() {
 
   return (
     <div className='navbar'>
-      <p className='logo'>Quizzy</p>
+      <p className='logo' onClick={() => navigate("/dashboard")}>Quizzy</p>
       {user ? (
         <div className="navbar-link" onClick={logoutFunc}>
           <span style={{ marginLeft: '0.5rem',color:"white",fontSize:"20px" }} >Logout</span>

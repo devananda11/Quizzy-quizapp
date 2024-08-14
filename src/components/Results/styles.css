@@ -50,11 +50,12 @@
 }
 
 .review-answer {
-  background-color: #f8f9fa;
+  background-color: #8c97ac;
   border: 1px solid #e9ecef;
   border-radius: 5px;
   padding: 15px;
   margin-bottom: 10px;
+  
 }
 
 .review-answer h3 {
@@ -81,8 +82,4 @@
   border: 1px solid #ced4da; /* Darker gray */
 }
 
-.review-answer {
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 5px;
-}
+

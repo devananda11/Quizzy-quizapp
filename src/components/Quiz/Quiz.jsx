@@ -3,9 +3,10 @@ import './styles.css';
 import { db, auth } from "../../firebase"; 
 import { Layout } from 'antd';
 import { useNavigate } from "react-router-dom";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { useAuthState } from 'react-firebase-hooks/auth';
 import Navbar from "../Navbar/Navbar";
+
 
 function Quiz({ id, quizTitle, questions }) {
   const navigate = useNavigate();
@@ -16,24 +17,36 @@ function Quiz({ id, quizTitle, questions }) {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [timeLeft, setTimeLeft] = useState(30);
   const [timeTaken, setTimeTaken] = useState(0);
-  const [quizRunning, setQuizRunning] = useState(false);
   const [reviewAnswers, setReviewAnswers] = useState([]);
-  const [quizStarted, setQuizStarted] = useState(false);
+  const [quizRunning, setQuizRunning] = useState(false);
+
+  
+
   useEffect(() => {
-    const handleBeforeUnload = (event) => {
-      if (quizStarted) {
-        event.preventDefault();
-        event.returnValue = ''; // Standard for most browsers
+    const checkIfQuizAttempted = async () => {
+      const resultsQuery = query(
+        collection(db, 'quizResults'),
+        where('quizid', '==', id),
+        where('name', '==', user.displayName)
+      );
+      const querySnapshot = await getDocs(resultsQuery);
+      if (!querySnapshot.empty) {
+        const resultData = querySnapshot.docs[0].data();
+        navigate('/results', { state: { 
+          quizId: id, 
+          quizTitle: resultData.quizTitle, 
+          score: resultData.score, 
+          timeTaken: resultData.timeTaken, 
+          reviewAnswers: resultData.reviewAnswers, 
+          questions: questions, 
+          totalQuestions: questions.length 
+        } });
       }
     };
-  
-    window.addEventListener('beforeunload', handleBeforeUnload);
-  
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [quizStarted]);
-  
+
+    checkIfQuizAttempted();
+  }, [id, navigate, user.displayName, questions]);
+
   useEffect(() => {
     let timer;
     if (quizRunning) {
@@ -66,7 +79,8 @@ function Quiz({ id, quizTitle, questions }) {
     setReviewAnswers([...reviewAnswers, { 
       question: questions[currentQuestionIndex].question, 
       selectedAnswer: answer, 
-      correctAnswer: questions[currentQuestionIndex].answers.find(a => a.correct)
+      correctAnswer: questions[currentQuestionIndex].answers.find(a => a.correct),
+      skipped: false
     }]);
     if (isCorrect) {
       setScore(score + 1);
@@ -78,37 +92,44 @@ function Quiz({ id, quizTitle, questions }) {
     const nextQuestion = currentQuestionIndex + 1;
     const isSkipped = selectedAnswer === null;
   
-    // Update review answers
-    setReviewAnswers([
-      ...reviewAnswers,
-      {
-        question: questions[currentQuestionIndex].question,
-        selectedAnswer: isSkipped ? null : selectedAnswer,
-        correctAnswer: questions[currentQuestionIndex].answers.find(a => a.correct),
-        skipped: isSkipped
-      }
-    ]);
+    if (isSkipped) {
+      setReviewAnswers([
+        ...reviewAnswers,
+        {
+          question: questions[currentQuestionIndex].question,
+          selectedAnswer: null,
+          correctAnswer: questions[currentQuestionIndex].answers.find(a => a.correct),
+          skipped: true
+        }
+      ]);
+    } else {
+      setReviewAnswers([
+        ...reviewAnswers,
+        reviewAnswers[reviewAnswers.length - 1] // Ensure the last question is added properly
+      ]);
+    }
   
-    // Update time taken for the current question
     const timeSpentOnCurrentQuestion = 30 - timeLeft;
     setTimeTaken(prevTimeTaken => prevTimeTaken + timeSpentOnCurrentQuestion);
   
     if (nextQuestion < questions.length) {
-      // Move to the next question
       setCurrentQuestionIndex(nextQuestion);
       setTimeLeft(30);
       setQuizRunning(true);
     } else {
-      // End the quiz and show the score
       setShowScore(true);
-  
-      // Save results to Firebase and navigate to results page
       await saveResultsToFirebase({
         name: user.displayName,
         quizid: id,
         quizTitle: quizTitle,
         score: score,
         timeTaken: timeTaken + (30 - timeLeft),
+        reviewAnswers: [...reviewAnswers, { // Ensure last question is added
+          question: questions[currentQuestionIndex].question,
+          selectedAnswer: isSkipped ? null : selectedAnswer,
+          correctAnswer: questions[currentQuestionIndex].answers.find(a => a.correct),
+          skipped: isSkipped
+        }],
         time: new Date()
       });
     }
@@ -116,13 +137,12 @@ function Quiz({ id, quizTitle, questions }) {
     setSelectedAnswer(null);
   };
   
-  
+
   async function saveResultsToFirebase(transaction) {
     try {
       await addDoc(collection(db, 'quizResults'), transaction);
       console.log('Document written with ID: ', transaction.quizid);
-      // Redirect to results page after successfully saving to Firebase
-      navigate('/results', {  state: { 
+      navigate('/results', { state: { 
         quizId: id, 
         quizTitle: quizTitle, 
         score: score, 
@@ -130,57 +150,54 @@ function Quiz({ id, quizTitle, questions }) {
         reviewAnswers: reviewAnswers, 
         questions: questions, 
         totalQuestions: questions.length 
-      }  });
+      } });
     } catch (e) {
       console.error('Error adding document: ', e);
     }
   }
-  
-  return (
-  <Layout className="layout">
-    <Navbar/>
-    <div className="app">
-      <div className="quiz-container">
-      <h1>{quizTitle}</h1>
-      <div className="quiz">
-        {showScore ? (
-          // Automatically navigate to the results page without showing an intermediate screen
-          <div>
-            <h2>Processing your results...</h2>
-          </div>
-        ) : (
-          <div>
-            <div className="title-and-time">
-              <h2>{questions[currentQuestionIndex].question}</h2>
-              <div className="timer">{timeLeft}s</div>
-            </div>
 
-            <div id="answer-buttons">
-              {questions[currentQuestionIndex].answers.map((answer, index) => (
-                <button
-                  key={index}
-                  className={`btn ${selectedAnswer !== null && (answer.correct ? 'correct' : 'incorrect')}`}
-                  onClick={() => handleAnswerOptionClick(answer.correct, answer)}
-                  disabled={selectedAnswer !== null}
-                >
-                  {answer.text}
-                </button>
-              ))}
-            </div>
-            {selectedAnswer !== null && (
-              <button id="next-btn" onClick={handleNextQuestion}>
-                {currentQuestionIndex < questions.length - 1 ? 'Next' : 'Show Score'}
-              </button>
+  return (
+    <Layout className="layout">
+      <Navbar/>
+      <div className="app">
+        <div className="quiz-container">
+          <h1>{quizTitle}</h1>
+          <div className="quiz">
+            {showScore ? (
+              <div>
+                <h2>Processing your results...</h2>
+              </div>
+            ) : (
+              <div>
+                <div className="title-and-time">
+                  <h2>{questions[currentQuestionIndex].question}</h2>
+                  <div className="timer">{timeLeft}s</div>
+                </div>
+
+                <div id="answer-buttons">
+                  {questions[currentQuestionIndex].answers.map((answer, index) => (
+                    <button
+                      key={index}
+                      className={`btn ${selectedAnswer !== null && (answer.correct ? 'correct' : 'incorrect')}`}
+                      onClick={() => handleAnswerOptionClick(answer.correct, answer)}
+                      disabled={selectedAnswer !== null}
+                    >
+                      {answer.text}
+                    </button>
+                  ))}
+                </div>
+                {selectedAnswer !== null && (
+                  <button id="next-btn" onClick={handleNextQuestion}>
+                    {currentQuestionIndex < questions.length - 1 ? 'Next' : 'Show Score'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
-      </div>
-      
-    </div>
-  </Layout>
-);
-
+    </Layout>
+  );
 }
 
 export default Quiz;

@@ -16,6 +16,7 @@
     font-weight: 500;
     font-size: 1.4rem;
     margin: 0;
+    cursor: pointer;
   }
   
   .navbar-link {

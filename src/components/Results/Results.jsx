@@ -3,8 +3,8 @@ import './styles.css';
 import { Bar } from '@ant-design/charts';
 import Navbar from '../Navbar/Navbar';
 import { useLocation } from 'react-router-dom';
-import { query,collection,where,orderBy,getDocs } from 'firebase/firestore';
-import { db} from "../../firebase"; 
+import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
+import { db } from "../../firebase"; 
 
 function Results() {
   const location = useLocation();
@@ -13,7 +13,7 @@ function Results() {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [showReviewAnswers, setShowReviewAnswers] = useState(true);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  console.log(reviewAnswers)
+
   useEffect(() => {
     if (quizId) {
       fetchLeaderboardData();
@@ -71,7 +71,7 @@ function Results() {
 
   return (
     <div className="results">
-      <Navbar/>
+      <Navbar />
       <div className="results-summary">
         <h1>Quiz Results</h1>
         <p>Quiz Title: {quizTitle}</p>
@@ -90,21 +90,19 @@ function Results() {
               const correctAnswer = question.answers.find(answer => answer.correct);
               let answerClass = '';
               let yourAnswerText = '';
-              let correctAnswerText = '';
+              let correctAnswerText = correctAnswer.text; // Always set the correct answer text
 
               if (review) {
                 if (review.skipped) {
                   answerClass = 'skipped';
                   yourAnswerText = 'You skipped this question';
-                  correctAnswerText = correctAnswer.text;
                 } else if (review.selectedAnswer && review.selectedAnswer.correct) {
                   answerClass = 'correct';
                   yourAnswerText = review.selectedAnswer.text;
-                  correctAnswerText = '';
+                  correctAnswerText = ''; // No need to display correct answer if it's correct
                 } else {
                   answerClass = 'incorrect';
-                  yourAnswerText = review.selectedAnswer ? review.selectedAnswer.text : '';
-                  correctAnswerText = correctAnswer.text;
+                  yourAnswerText = review.selectedAnswer ? review.selectedAnswer.text : 'No answer selected';
                 }
               }
 
